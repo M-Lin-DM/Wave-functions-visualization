@@ -10,7 +10,7 @@ op: Optional[c4d.BaseObject]  # The active object, None if unselected
 
 params = dict()
 
-grid_size_factor = 2
+grid_size_factor = 3
 params['grid_length'] = int(16 * grid_size_factor)  # number of grid points
 params['grid_height'] = int(9 * grid_size_factor)
 params['plot_height'] = 4 * np.pi  # actual graph space
@@ -18,56 +18,63 @@ params['plot_length'] = params['plot_height'] * 16 / 9
 
 # video params
 params['fps'] = 30
-params['video_duration'] = 5 # secs
+params['video_duration'] = 5  # secs
 params['N_frames'] = int(params['video_duration'] * params['fps'])
 params['dpi'] = 120
 
 # wave function params
 # scale params
-params['s_A'] = 1 / grid_size_factor
-params['s_w'] = 0.7
+params['s_A'] = 1 / grid_size_factor * 2.6
+params['s_w'] = 0.8
 params['s_v'] = 0.03
-params['s_b'] = 0  # osc about 0 doubles the spatial freq
+params['s_b'] = 0.5  # osc about 0 doubles the spatial freq
 
 # rotation params
 params['r_A'] = 1
 params['r_w'] = 1
-params['r_v'] = 0.08
+params['r_v'] = 0.04
 params['r_b'] = 0
 
 # color params
 params['base_color'] = get_random_base_color() + 0.1
-params['c_A'] = 0.5
+params['c_A'] = 0.4
 params['c_w'] = 1
-params['c_v'] = 0.03
+params['c_v'] = 0.02
 params['c_b'] = 0.5
 
 # define attribute functions. Turn off functions here not in loop---------------------
 func_dict = {}
-func_dict['sx'] = lambda r, theta, t: params['s_A'] * np.cos(theta*params['s_w'] - 1.1*params['s_v']*t)
-func_dict['sy'] = lambda r, theta, t: params['s_A'] * np.sin(theta*params['s_w'] - params['s_v']*t)
-func_dict['sz'] = polar_wave(params['s_A'], 0.8*params['s_w'], 0.8*params['s_v'], params['s_b'])
+func_dict['sx'] = lambda r, theta, t: params['s_A'] * np.sin(4*theta*params['s_w'] - params['s_v']*t)
+func_dict['sy'] = lambda r, theta, t: params['s_A'] * np.sin(3*theta*params['s_w'] - params['s_v']*t)
+func_dict['sz'] = lambda r, theta, t: params['s_A'] * np.sin(2*theta*params['s_w'] - params['s_v']*t)
 #func_dict['sy'] = func_dict['sx']
 #func_dict['sz'] = func_dict['sx']
 
-func_dict['ry'] = lambda r, theta, t: np.cos(theta*params['r_w'] - params['r_v']*t)
-func_dict['rx'] = polar_wave(1.1 * params['r_A'], 1.1 * params['r_w'], params['r_v'], params['r_b'])
+#func_dict['sy'] = constant(params['s_A'])
+#func_dict['sz'] = constant(params['s_A'])
+
+# rotation
+func_dict['ry'] = polar_wave(params['r_A'], params['r_w'], params['r_v'], params['r_b'])
+func_dict['rx'] = polar_wave(params['r_A'], 1.2*params['r_w'], params['r_v'], params['r_b'])
 func_dict['rz'] = polar_wave(0.7*params['r_A'], 0.5*params['r_w'], 1.5*params['r_v'], params['r_b'])
+
 #func_dict['ry'] = constant(0)
-#func_dict['rx'] = constant(0.81)
+#func_dict['rx'] = constant(0)
 #func_dict['rz'] = constant(0)
 
-func_dict['R'] = lambda r, theta, t: params['c_A'] * np.cos(theta*params['c_w'] - params['c_v']*t) + params['c_b']
-func_dict['G'] = lambda r, theta, t: params['c_A'] * np.sin(theta*params['c_w'] - params['c_v']*t) + params['c_b']  # function of the form f(r, theta, t)
-func_dict['B'] = polar_wave(params['c_A'], params['c_w'], params['c_v'], params['c_b'])
+# for uniform color:
 base_color = params['base_color']
 #func_dict['R'] = constant(base_color[0])
 #func_dict['G'] = constant(base_color[1])
 #func_dict['B'] = constant(base_color[2])
 
+# for color waves:
+func_dict['R'] = lambda r, theta, t: params['c_A'] * np.cos(5*theta*params['c_w'] - params['c_v']*t) + params['c_b']
+func_dict['G'] = lambda r, theta, t: params['c_A'] * np.cos(4*theta*params['c_w'] - params['c_v']*t) + params['c_b']
+func_dict['B'] = polar_wave(params['c_A'], params['c_w'], params['c_v'], params['c_b'])
+
 
 def main() -> None:
-    # c4d.LoadPythonScript('C:/Users/MrLin/AppData/Roaming/Maxon/python/python39/libs/generate_waves.py')
     doc = c4d.documents.GetActiveDocument()
     save_path = 'C:/Users/MrLin/OneDrive/COMPLEX OBJECTS/PROJECTS/RIPPLES/JUPYTER NOTEBOOK/movies/image stack/'
     render_data = doc.GetActiveRenderData()
@@ -96,8 +103,9 @@ def main() -> None:
         # adjust save path in render data
         render_data[
             c4d.RDATA_PATH] = f'{save_path}img_{t}.png'
-        # Adjust cam position on path
-        align_to_spline[c4d.ALIGNTOSPLINETAG_POSITION] = camera_position(t, 0.25 - 0.02, 0.25+0.02, params) # max range is 0.19, 0.31,
+
+        # Adjust cam position on path. Comment off if using fixed camera
+        # align_to_spline[c4d.ALIGNTOSPLINETAG_POSITION] = camera_position(t, 0.25 - 0.02, 0.25+0.02, params)  # max range is 0.19, 0.31,
 
         attr_dict = frame_dict[str(t)]
         if t == 0:
@@ -136,10 +144,6 @@ def main() -> None:
         if c4d.documents.RenderDocument(doc, render_data.GetData(), bmp,
                                         c4d.RENDERFLAGS_EXTERNAL) != c4d.RENDERRESULT_OK:
             raise RuntimeError("Failed to render the temporary document.")
-
-        # print('removing objects')
-        # clear out all spheres
-    # remove_objects(doc)  # DO NOT REMOVE IF USING MODUFY OBJECTS
 
 
 if __name__ == '__main__':

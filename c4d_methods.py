@@ -87,5 +87,6 @@ def modify_objects(doc, attr_dict, name_to_index_dict):
 
 
 def camera_position(k, min_percent, max_percent, params):
+    # this outputs the percentage (along a spline path) corresponding to frame t
     position_range = np.linspace(min_percent, max_percent, params['N_frames'])
     return position_range[k]
